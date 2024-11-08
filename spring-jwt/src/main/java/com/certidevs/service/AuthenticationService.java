@@ -26,6 +26,11 @@ public class AuthenticationService {
     private final AuthenticationManager authenticationManager;
 
     public LoginResponse signup(RegisterUserDto request) throws BadRequestException {
+        if (userRepository.existsByEmail(request.getEmail())) {
+            log.error("SIGNUP ERROR -> El correo {} ya está en uso.", request.getEmail());
+            throw new RuntimeException("Error al registrarse: el correo ya está en uso.");
+        }
+
         var user = User
                 .builder()
                 .fullName(request.getFullName())
@@ -34,13 +39,8 @@ public class AuthenticationService {
                 .role("ROLE_USER")
                 .build();
 
-        try {
-            user = userService.save(user);
-            log.info("SIGNUP -> Usuario Registrado con exito");
-        } catch (DataIntegrityViolationException e) {
-            log.error("SIGNUP ERROR -> {} Detalles: ya está en uso", request.getEmail());
-            throw new RuntimeException("Error al intentar registrarse. El email ya está en uso.");
-        }
+        user = userService.save(user);
+        log.info("SIGNUP -> Usuario Registrado con exito");
 
         var jwt = JwtService.generateToken(user);
         return  LoginResponse.builder().token(jwt).build();
